@@ -1,4 +1,4 @@
-# keyhunt
+# Keyhunt
 This is the corrected and perfected version of Alberto’s Keyhunt for Linux(I’m a Linux developer) which will NOT run indefintely and TOO randomly (so it will not run randomly, repeating itself, and never finding anything in keyspaces beyond 130 bits, because the flawed rand method has been removed and now it will simply check each candidate once, until it finds the target or the keyspace is exhausted). Further random can actually be turned off or on(you couldn’t actually turn random off before it just seemed as though it was) and the bloom filter is now available in any mode so if you have a reasonable amount of ram (128GB+), you should see a notable improvement across the board.
 
 # Disclaimer
