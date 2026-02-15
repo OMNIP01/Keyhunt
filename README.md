@@ -3,10 +3,6 @@ This is the corrected and perfected version of Alberto’s Keyhunt for Linux(I�
 
 Note: This version will ONLY run until it either finds the target, or the space is exhausted(because the target WASN'T there...... Big difference, it will not waste your time).
 
-# Disclaimer
-This is an extremely powerful program (I have many), so please do not use this for anything that you shouldn’t use it for…. However, congratulations if it serves you well – I thought carefully about this one, but since it’s valentines day, please enjoy and buy me a coffee/beverage maybe? (please send donations to 1MLLXxgUHcWRvFDmDzgmJXdfNYB9vF1bVR / 0xc1BCD7c5Cc5B726445dA58b8d61A4D9690eeAc6c)
-“Stick to the puzzles” – I’d recommend it, it’s why I’ve learned so much so quickly. - Omnip01
-
 Tool for hunting privatekeys for crypto currencies that use secp256k1 elliptic curve
 
 Post: https://bitcointalk.org/index.php?topic=5322040.0
@@ -1320,6 +1316,6 @@ This program was possible thanks to
 - All the users that tested it, reported bugs, requested improvements and shared their knowledge.
 
 
-Thank you.
-# Keyhunt
-# Keyhunt
+# Disclaimer
+This is an extremely powerful program (I have many), so please do not use this for anything that you shouldn’t use it for…. However, congratulations if it serves you well, please enjoy and perhaps buy me a coffee/beverage maybe? (please send donations to 1MLLXxgUHcWRvFDmDzgmJXdfNYB9vF1bVR / 0xc1BCD7c5Cc5B726445dA58b8d61A4D9690eeAc6c)
+“Stick to the puzzles” – I’d recommend it, it’s why I’ve learned so much so quickly. - Omnip01
