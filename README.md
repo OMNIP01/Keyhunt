@@ -1318,4 +1318,8 @@ This program was possible thanks to
 
 # Disclaimer
 This is an extremely powerful program (I have many), so please do not use this for anything that you shouldn’t use it for…. However, congratulations if it serves you well, please enjoy and perhaps buy me a coffee/beverage maybe? (please send donations to 1MLLXxgUHcWRvFDmDzgmJXdfNYB9vF1bVR / 0xc1BCD7c5Cc5B726445dA58b8d61A4D9690eeAc6c)
-“Stick to the puzzles” – I’d recommend it, it’s why I’ve learned so much so quickly. - Omnip01
+“Stick to the puzzles” – I’d recommend it, it’s why I’ve learned so much so quickly.
+
+ALL THE CODES, PROGRAM AND INFORMATION IN THIS REPO ARE FOR EDUCATIONAL PURPOSES ONLY. USE IT AT YOUR OWN RISK. THE DEVELOPER WILL NOT BE RESPONSIBLE FOR ANY LOSS, DAMAGE OR CLAIM ARISING FROM USING THIS PROGRAM.
+
+Omnip01
