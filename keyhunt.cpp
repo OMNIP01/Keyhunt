@@ -129,7 +129,7 @@ char *raw_baseminikey = NULL;
 char *minikeyN = NULL;
 int minikey_n_limit;
 	
-const char *version = "0.2.230519 Satoshi Quest";
+const char *version = "0.2.230519.1 Satoshi Quest (OMNIP01)";
 
 #define CPU_GRP_SIZE_BASE 1024
 uint32_t CPU_GRP_SIZE = CPU_GRP_SIZE_BASE;
@@ -991,10 +991,17 @@ int main(int argc, char **argv)	{
 			break;
 		}
 		
-		if(FLAGMODE != MODE_VANITY && !FLAGREADEDFILE1)	{
+	if(FLAGMODE != MODE_VANITY && !FLAGREADEDFILE1)	{
 			printf("[+] Sorting data ...");
 			_sort(addressTable,N);
 			printf(" done! %" PRIu64 " values were loaded and sorted\n",N);
+			if(N > 160) {
+				fprintf(stderr, "[W] Warning: More than 160 addresses loaded (%" PRIu64 ").\n", N);
+				fprintf(stderr, "[W] This tool is designed for educational purposes and puzzle solving.\n");
+				fprintf(stderr, "[W] Loading large target lists may be indicative of misuse.\n");
+				fprintf(stderr, "[E] Terminating to protect the ecosystem. Maximum allowed: 160 addresses.\n");
+				exit(EXIT_FAILURE);
+			}
 			writeFileIfNeeded(fileName);
 		}
 	}
@@ -1073,10 +1080,17 @@ int main(int argc, char **argv)	{
 				}
 			}
 		}
-		fclose(fd);
+	fclose(fd);
 		bsgs_point_number = N;
 		if(bsgs_point_number > 0)	{
 			printf("[+] Added %u points from file\n",bsgs_point_number);
+			if(bsgs_point_number > 160) {
+				fprintf(stderr, "[W] Warning: More than 160 public keys loaded (%u).\n", bsgs_point_number);
+				fprintf(stderr, "[W] This tool is designed for educational purposes and puzzle solving.\n");
+				fprintf(stderr, "[W] Loading large target lists may be indicative of misuse.\n");
+				fprintf(stderr, "[E] Terminating to protect the ecosystem. Maximum allowed: 160 public keys.\n");
+				exit(EXIT_FAILURE);
+			}
 		}
 		else	{
 			fprintf(stderr,"[E] The file don't have any valid publickeys\n");

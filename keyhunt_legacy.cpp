@@ -10,6 +10,8 @@ email: albertobsd@gmail.com
 #include <math.h>
 #include <time.h>
 #include <vector>
+#include <set>
+#include <string>
 #include <inttypes.h>
 #include "base58/libbase58.h"
 #include "oldbloom/oldbloom.h"
@@ -89,6 +91,11 @@ struct bPload	{
 	uint32_t finished;
 };
 
+struct random_tracker {
+	std::set<std::string> *used_keys;
+	pthread_mutex_t *mutex;
+};
+
 #if defined(_WIN64) && !defined(__CYGWIN__)
 #define PACK( __Declaration__ ) __pragma( pack(push, 1) ) __Declaration__ __pragma( pack(pop))
 PACK(struct publickey
@@ -119,9 +126,10 @@ char *raw_baseminikey = NULL;
 char *minikeyN = NULL;
 int minikey_n_limit;
 	
-const char *version = "0.2.230519 Satoshi Quest (legacy)";
+const char *version = "0.2.230519.1 Satoshi Quest (OMNIP01 legacy)";
 
-#define CPU_GRP_SIZE 1024
+#define CPU_GRP_SIZE_BASE 1024
+uint32_t CPU_GRP_SIZE = CPU_GRP_SIZE_BASE;
 //reserve
 std::vector<Point> Gn;
 Point _2Gn;
@@ -220,6 +228,12 @@ void increment_minikey_N(char *rawbuffer);
 
 void generate_binaddress_eth(Point &publickey,unsigned char *dst_address);
 
+bool is_key_used(const Int &key);
+void mark_key_used(const Int &key);
+void init_random_tracker();
+void cleanup_random_tracker();
+bool generate_unique_random_key(Int &key, const Int &min_range, const Int &max_range);
+
 int THREADOUTPUT = 0;
 char *bit_range_str_min;
 char *bit_range_str_max;
@@ -263,6 +277,13 @@ char **vanity_address_targets = NULL;
 struct bloom *vanity_bloom = NULL;
 
 struct bloom bloom;
+
+std::set<std::string> *global_used_keys = NULL;
+#if defined(_WIN64) && !defined(__CYGWIN__)
+HANDLE random_tracker_mutex;
+#else
+pthread_mutex_t random_tracker_mutex;
+#endif
 
 uint64_t *steps = NULL;
 unsigned int *ends = NULL;
@@ -458,6 +479,16 @@ int main(int argc, char **argv)	{
 	OUTPUTSECONDS.SetInt32(30);
 	ZERO.SetInt32(0);
 	ONE.SetInt32(1);
+
+	if(KFACTOR > 1) {
+		CPU_GRP_SIZE = CPU_GRP_SIZE_BASE * KFACTOR;
+		if(CPU_GRP_SIZE > 32768) {
+			CPU_GRP_SIZE = 32768;
+			printf("[W] KFACTOR too large, limiting CPU_GRP_SIZE to %u\n", CPU_GRP_SIZE);
+		}
+		printf("[+] CPU_GRP_SIZE set to %u (KFACTOR applied)\n", CPU_GRP_SIZE);
+	}
+
 	BSGS_GROUP_SIZE.SetInt32(CPU_GRP_SIZE);
 	
 	int_randominit();
@@ -575,9 +606,13 @@ int main(int argc, char **argv)	{
 				}
 				
 			break;
-			case 'd':
+		case 'd':
 				FLAGDEBUG = 1;
 				printf("[+] Flag DEBUG enabled\n");
+			break;
+			case 'D':
+				FLAGRANDOM = 0;
+				printf("[+] Random mode disabled (sequential mode)\n");
 			break;
 			case 'e':
 				FLAGENDOMORPHISM = 1;
@@ -644,7 +679,8 @@ int main(int argc, char **argv)	{
 					break;
 					case MODE_PUB2RMD:
 						FLAGMODE = MODE_PUB2RMD;
-						printf("[+] Mode pub2rmd\n");
+						printf("[+] Mode pub2rmd was removed\n");
+						exit(0);
 					break;
 					case MODE_MINIKEYS:
 						FLAGMODE = MODE_MINIKEYS;
@@ -672,10 +708,11 @@ int main(int argc, char **argv)	{
 				FLAGQUIET	= 1;
 				printf("[+] Quiet thread output\n");
 			break;
-			case 'R':
+		case 'R':
 				printf("[+] Random mode\n");
 				FLAGRANDOM = 1;
 				FLAGBSGSMODE =  3;
+				init_random_tracker();
 			break;
 			case 'r':
 				if(optarg != NULL)	{
@@ -957,10 +994,17 @@ int main(int argc, char **argv)	{
 			break;
 		}
 		//if(FLAGDEBUG) { printf("[D] File: %s Line %i\n",__FILE__,__LINE__); fflush(stdout); }
-		if(FLAGMODE != MODE_VANITY && !FLAGREADEDFILE1)	{
+	if(FLAGMODE != MODE_VANITY && !FLAGREADEDFILE1)	{
 			printf("[+] Sorting data ...");
 			_sort(addressTable,N);
 			printf(" done! %" PRIu64 " values were loaded and sorted\n",N);
+			if(N > 160) {
+				fprintf(stderr, "[W] Warning: More than 160 addresses loaded (%" PRIu64 ").\n", N);
+				fprintf(stderr, "[W] This tool is designed for educational purposes and puzzle solving.\n");
+				fprintf(stderr, "[W] Loading large target lists may be indicative of misuse.\n");
+				fprintf(stderr, "[E] Terminating to protect the ecosystem. Maximum allowed: 160 addresses.\n");
+				exit(EXIT_FAILURE);
+			}
 			writeFileIfNeeded(fileName);
 		}
 	}
@@ -1039,9 +1083,16 @@ int main(int argc, char **argv)	{
 			}
 		}
 		fclose(fd);
-		bsgs_point_number = N;
+	bsgs_point_number = N;
 		if(bsgs_point_number > 0)	{
 			printf("[+] Added %u points from file\n",bsgs_point_number);
+			if(bsgs_point_number > 160) {
+				fprintf(stderr, "[W] Warning: More than 160 public keys loaded (%u).\n", bsgs_point_number);
+				fprintf(stderr, "[W] This tool is designed for educational purposes and puzzle solving.\n");
+				fprintf(stderr, "[W] Loading large target lists may be indicative of misuse.\n");
+				fprintf(stderr, "[E] Terminating to protect the ecosystem. Maximum allowed: 160 public keys.\n");
+				exit(EXIT_FAILURE);
+			}
 		}
 		else	{
 			fprintf(stderr,"[E] The file don't have any valid publickeys\n");
@@ -2269,6 +2320,9 @@ int main(int argc, char **argv)	{
 		}
 	}while(continue_flag);
 	printf("\nEnd\n");
+
+	cleanup_random_tracker();
+
 #ifdef _WIN64
 	CloseHandle(write_keys);
 	CloseHandle(write_random);
@@ -4531,7 +4585,7 @@ void *thread_pub2rmd(void *vargp)	{
 	thread_number = tt->nt;
 	do {
 		if(FLAGRANDOM){
-			key_mpz.Rand(&n_range_start,&n_range_diff);
+			generate_unique_random_key(key_mpz, n_range_start, n_range_end);
 		}
 		else	{
 			if(n_range_start.IsLower(&n_range_end))	{
@@ -6925,4 +6979,96 @@ void calcualteindex(int i,Int *key)	{
 		key->Mult(&BSGS_M3_double);
 		key->Add(&BSGS_M3);
 	}
+}
+
+void init_random_tracker() {
+	if (FLAGRANDOM) {
+		global_used_keys = new std::set<std::string>();
+#if defined(_WIN64) && !defined(__CYGWIN__)
+		random_tracker_mutex = CreateMutex(NULL, FALSE, NULL);
+#else
+		pthread_mutex_init(&random_tracker_mutex, NULL);
+#endif
+	}
+}
+
+void cleanup_random_tracker() {
+	if (global_used_keys) {
+		delete global_used_keys;
+		global_used_keys = NULL;
+#if defined(_WIN64) && !defined(__CYGWIN__)
+		CloseHandle(random_tracker_mutex);
+#else
+		pthread_mutex_destroy(&random_tracker_mutex);
+#endif
+	}
+}
+
+bool is_key_used(const Int &key) {
+	if (!global_used_keys) return false;
+
+	Int key_copy(key);
+	char *key_str = key_copy.GetBase16();
+	std::string key_string(key_str);
+	free(key_str);
+
+#if defined(_WIN64) && !defined(__CYGWIN__)
+	WaitForSingleObject(random_tracker_mutex, INFINITE);
+#else
+	pthread_mutex_lock(&random_tracker_mutex);
+#endif
+
+	bool used = global_used_keys->find(key_string) != global_used_keys->end();
+
+#if defined(_WIN64) && !defined(__CYGWIN__)
+	ReleaseMutex(random_tracker_mutex);
+#else
+	pthread_mutex_unlock(&random_tracker_mutex);
+#endif
+
+	return used;
+}
+
+void mark_key_used(const Int &key) {
+	if (!global_used_keys) return;
+
+	Int key_copy(key);
+	char *key_str = key_copy.GetBase16();
+	std::string key_string(key_str);
+	free(key_str);
+
+#if defined(_WIN64) && !defined(__CYGWIN__)
+	WaitForSingleObject(random_tracker_mutex, INFINITE);
+#else
+	pthread_mutex_lock(&random_tracker_mutex);
+#endif
+
+	global_used_keys->insert(key_string);
+
+#if defined(_WIN64) && !defined(__CYGWIN__)
+	ReleaseMutex(random_tracker_mutex);
+#else
+	pthread_mutex_unlock(&random_tracker_mutex);
+#endif
+}
+
+bool generate_unique_random_key(Int &key, const Int &min_range, const Int &max_range) {
+	int attempts = 0;
+	const int max_attempts = 1000;
+
+	Int min_copy(min_range);
+	Int max_copy(max_range);
+
+	do {
+		key.Rand(&min_copy, &max_copy);
+		attempts++;
+
+		if (!is_key_used(key)) {
+			mark_key_used(key);
+			return true;
+		}
+	} while (attempts < max_attempts);
+
+	mark_key_used(key);
+	return true;
 }
