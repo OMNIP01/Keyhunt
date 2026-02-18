@@ -2,7 +2,6 @@
 - Added deterministic random mode with key tracking (no repeated keys in random mode)
 - Added -D flag to disable random mode (sequential mode)
 - Bloom filter now active in all modes
-- Added 160 address limit with warning/termination to protect the ecosystem
 - KFACTOR now applied to CPU_GRP_SIZE for performance optimization
 - pub2rmd mode removed (as per original author's intent)
 - Legacy version updated with all features from main version
